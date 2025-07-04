@@ -92,3 +92,26 @@ def get_summary_by_month(df):
     }
     summary['Mes'] = summary['Mes'].map(month_map)
     return summary
+
+def get_top_technicians_with_client_breakdown(df, top_n=5):
+    """Obtiene los top N técnicos con más horas trabajadas y su desglose por cliente."""
+    if df.empty:
+        return pd.DataFrame(), pd.DataFrame()
+    
+    # Obtener el total de horas por técnico
+    tech_summary = df.groupby('tecnico')['tiempo'].sum().reset_index()
+    tech_summary.columns = ['Técnico', 'Total Horas']
+    tech_summary = tech_summary.sort_values('Total Horas', ascending=False).head(top_n)
+    
+    # Obtener los nombres de los top N técnicos
+    top_tecnicos = tech_summary['Técnico'].tolist()
+    
+    # Filtrar el DataFrame original para incluir solo los top N técnicos
+    df_top_tecnicos = df[df['tecnico'].isin(top_tecnicos)]
+    
+    # Obtener el desglose por cliente para cada técnico
+    breakdown = df_top_tecnicos.groupby(['tecnico', 'cliente'])['tiempo'].sum().reset_index()
+    breakdown.columns = ['Técnico', 'Cliente', 'Horas']
+    breakdown = breakdown.sort_values(['Técnico', 'Horas'], ascending=[True, False])
+    
+    return tech_summary, breakdown

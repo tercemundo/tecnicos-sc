@@ -108,12 +108,18 @@ elif menu_option == "Análisis y Métricas":
         # Gráfico de pastel para tipos de tarea
         if not summary_tipo_tarea.empty:
             st.write("Distribución de Horas por Tipo de Tarea")
-            st.altair_chart(
-                pd.DataFrame({'Tipo de Tarea': summary_tipo_tarea['Tipo de Tarea'], 'Total Horas': summary_tipo_tarea['Total Horas']})
-                .set_index('Tipo de Tarea')
-                .plot(kind='pie', y='Total Horas', autopct='%1.1f%%', title='Distribución de Horas por Tipo de Tarea').figure,
-                use_container_width=True
+            import altair as alt
+            
+            # Crear un gráfico de pastel con Altair
+            pie_chart = alt.Chart(summary_tipo_tarea).mark_arc().encode(
+                theta=alt.Theta(field="Total Horas", type="quantitative"),
+                color=alt.Color(field="Tipo de Tarea", type="nominal"),
+                tooltip=['Tipo de Tarea', 'Total Horas']
+            ).properties(
+                title='Distribución de Horas por Tipo de Tarea'
             )
+            
+            st.altair_chart(pie_chart, use_container_width=True)
 
         # --- Resumen por Mes ---
         st.subheader("Horas Totales por Mes")
@@ -123,6 +129,28 @@ elif menu_option == "Análisis y Métricas":
         if not summary_mes.empty:
             st.write("Evolución de Horas Mensuales")
             st.line_chart(summary_mes.set_index('Mes')['Total Horas'])
+
+        # --- Top 5 Técnicos con Desglose por Cliente ---
+        st.subheader("Top 5 Técnicos con Desglose por Cliente")
+        if st.button("Mostrar Top 5 Técnicos y Desglose por Cliente"):
+            top_tecnicos, desglose_clientes = be.get_top_technicians_with_client_breakdown(all_records_df)
+            
+            if not top_tecnicos.empty:
+                st.write("### Top 5 Técnicos con Más Horas Trabajadas")
+                st.dataframe(top_tecnicos)
+                
+                # Gráfico de barras para los top 5 técnicos
+                st.bar_chart(top_tecnicos.set_index('Técnico')['Total Horas'])
+                
+                st.write("### Desglose de Horas por Cliente para cada Técnico")
+                # Mostrar desglose por cliente para cada técnico
+                for tecnico in top_tecnicos['Técnico']:
+                    st.write(f"**{tecnico}**")
+                    desglose_tecnico = desglose_clientes[desglose_clientes['Técnico'] == tecnico]
+                    st.dataframe(desglose_tecnico[['Cliente', 'Horas']])
+                    
+                    # Gráfico de barras para el desglose por cliente
+                    st.bar_chart(desglose_tecnico.set_index('Cliente')['Horas'])
 
     else:
         st.info("No hay registros para analizar. Por favor, carga el archivo Excel.")
